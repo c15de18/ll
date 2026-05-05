@@ -89,3 +89,6 @@ int main() {
 
     return 0;
 }
+
+// g++ bfs.cpp -o bfs -fopenmp
+// ./bfs
