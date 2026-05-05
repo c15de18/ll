@@ -1,6 +1,5 @@
 #include <iostream>
 #include <vector>
-#include <queue>
 #include <omp.h>
 using namespace std;
 
@@ -19,40 +18,40 @@ public:
         adj[v].push_back(u);
     }
 
-    void parallelBFS(int start) {
-        vector<bool> visited(V, false);
-        vector<int> currentLevel, nextLevel;
+    void parallelDFSUtil(int node, vector<bool> &visited) {
 
-        visited[start] = true;
-        currentLevel.push_back(start);
+        #pragma omp critical
+        {
+            if (visited[node]) return;
+            visited[node] = true;
+            cout << node << " ";
+        }
 
-        cout << "\nParallel BFS Traversal: ";
+        for (int i = 0; i < adj[node].size(); i++) {
+            int neighbor = adj[node][i];
 
-        while (!currentLevel.empty()) {
-
-            #pragma omp parallel for
-            for (int i = 0; i < currentLevel.size(); i++) {
-                int node = currentLevel[i];
-
-                #pragma omp critical
-                cout << node << " ";
-
-                for (int neighbor : adj[node]) {
-
-                    if (!visited[neighbor]) {
-                        #pragma omp critical
-                        {
-                            if (!visited[neighbor]) {
-                                visited[neighbor] = true;
-                                nextLevel.push_back(neighbor);
-                            }
-                        }
-                    }
+            #pragma omp task
+            {
+                if (!visited[neighbor]) {
+                    parallelDFSUtil(neighbor, visited);
                 }
             }
+        }
 
-            currentLevel = nextLevel;
-            nextLevel.clear();
+        #pragma omp taskwait
+    }
+
+    void parallelDFS(int start) {
+        vector<bool> visited(V, false);
+
+        cout << "\nParallel DFS Traversal: ";
+
+        #pragma omp parallel
+        {
+            #pragma omp single
+            {
+                parallelDFSUtil(start, visited);
+            }
         }
 
         cout << endl;
@@ -81,7 +80,7 @@ int main() {
     cout << "Enter starting vertex: ";
     cin >> start;
 
-    g.parallelBFS(start);
+    g.parallelDFS(start);
 
     return 0;
 }
