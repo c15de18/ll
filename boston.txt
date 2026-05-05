@@ -1,0 +1,91 @@
+# ==========================================================
+# Boston Housing Price Prediction using Deep Neural Network
+# ==========================================================
+
+# 1. Import Libraries
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score
+import matplotlib.pyplot as plt
+
+# 2. Load Dataset (CSV File)
+df = pd.read_csv("1_boston_housing.csv")
+
+# 3. Separate Features and Target
+X = df.drop('MEDV', axis=1)
+y = df['MEDV']
+
+# 4. Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# 5. Feature Scaling (IMPORTANT)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# 6. Build Deep Neural Network Model
+model = Sequential()
+
+model.add(Dense(64, activation='relu', input_shape=(13,)))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(1, activation='linear'))  # Linear Regression Output
+
+# 7. Compile Model
+model.compile(
+    optimizer='adam',
+    loss='mean_squared_error',
+    metrics=['mae']
+)
+
+# 8. Train Model
+history = model.fit(
+    X_train, y_train,
+    epochs=100,
+    batch_size=16,
+    validation_split=0.1,
+    verbose=1
+)
+
+# 9. Evaluate Model
+mse, mae = model.evaluate(X_test, y_test)
+
+print("\nModel Evaluation:")
+print("MSE:", mse)
+print("MAE:", mae)
+
+# 10. Predictions
+y_pred = model.predict(X_test)
+
+# 11. R2 Score
+r2 = r2_score(y_test, y_pred)
+print("R2 Score:", r2)
+
+# 12. Display Sample Predictions
+print("\nSample Predictions:")
+for i in range(5):
+    print(f"Actual: {y_test.iloc[i]:.2f}  Predicted: {y_pred[i][0]:.2f}")
+
+# 13. Plot: Loss vs Epochs (VERY IMPORTANT FOR EXAM)
+plt.figure()
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title("Model Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.legend(["Training Loss", "Validation Loss"])
+plt.show()
+
+# 14. Plot: Actual vs Predicted
+plt.figure()
+plt.scatter(y_test, y_pred)
+plt.xlabel("Actual Prices")
+plt.ylabel("Predicted Prices")
+plt.title("Actual vs Predicted Prices")
+plt.show()

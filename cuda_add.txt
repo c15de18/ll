@@ -1,0 +1,68 @@
+!nvidia-smi
+!nvcc --version
+
+%%writefile vector_add.cu
+#include <iostream>
+#include <cuda_runtime.h>
+using namespace std;
+
+__global__ void addVectors(int* A, int* B, int* C, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n)
+        C[i] = A[i] + B[i];
+}
+
+int main() {
+    int n;
+    cout << "Enter size of vectors: ";
+    cin >> n;
+
+    int size = n * sizeof(int);
+
+    int *A, *B, *C;
+
+    cudaMallocHost(&A, size);
+    cudaMallocHost(&B, size);
+    C = (int*) malloc(size);
+
+    cout << "Enter elements of vector A: ";
+    for(int i = 0; i < n; i++) cin >> A[i];
+
+    cout << "Enter elements of vector B: ";
+    for(int i = 0; i < n; i++) cin >> B[i];
+
+    int *dA, *dB, *dC;
+
+    cudaMalloc(&dA, size);
+    cudaMalloc(&dB, size);
+    cudaMalloc(&dC, size);
+
+    cudaMemcpy(dA, A, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(dB, B, size, cudaMemcpyHostToDevice);
+
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+
+    addVectors<<<numBlocks, blockSize>>>(dA, dB, dC, n);
+
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(C, dC, size, cudaMemcpyDeviceToHost);
+
+    cout << "Resultant vector C: ";
+    for(int i = 0; i < n; i++) cout << C[i] << " ";
+    cout << endl;
+
+    // Free memory
+    cudaFree(dA);
+    cudaFree(dB);
+    cudaFree(dC);
+    cudaFreeHost(A);
+    cudaFreeHost(B);
+    free(C);
+
+    return 0;
+}
+
+!nvcc vector_add.cu -o vector_add
+!./vector_add

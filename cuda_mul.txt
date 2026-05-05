@@ -1,0 +1,68 @@
+!nvidia-smi
+!nvcc --version
+
+%%writefile matmul.cu
+#include <iostream>
+#include <cuda_runtime.h>
+using namespace std;
+
+__global__ void matmul(long long *A, long long *B, long long *C, int N) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (row < N && col < N) {
+        long long sum = 0;
+        for (int k = 0; k < N; k++) {
+            sum += A[row * N + k] * B[k * N + col];
+        }
+        C[row * N + col] = sum;
+    }
+}
+
+int main() {
+    int N;
+    cout << "Enter size: ";
+    cin >> N;
+
+    int size = N * N * sizeof(long long);
+
+    long long *h_A, *h_B, *h_C;
+    cudaMallocHost(&h_A, size);
+    cudaMallocHost(&h_B, size);
+    cudaMallocHost(&h_C, size);
+
+    cout << "Enter matrix A:\n";
+    for (int i = 0; i < N*N; i++) cin >> h_A[i];
+
+    cout << "Enter matrix B:\n";
+    for (int i = 0; i < N*N; i++) cin >> h_B[i];
+
+    long long *d_A, *d_B, *d_C;
+    cudaMalloc(&d_A, size);
+    cudaMalloc(&d_B, size);
+    cudaMalloc(&d_C, size);
+
+    cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, h_B, size, cudaMemcpyHostToDevice);
+
+    dim3 threads(16,16);
+    dim3 blocks((N+15)/16,(N+15)/16);
+
+    matmul<<<blocks, threads>>>(d_A, d_B, d_C, N);
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
+
+    cout << "\nResult:\n";
+    for(int i=0;i<N;i++){
+        for(int j=0;j<N;j++){
+            cout << h_C[i*N+j] << " ";
+        }
+        cout << endl;
+    }
+
+    return 0;
+}
+
+!nvcc matmul.cu -o matmul
+!./matmul
