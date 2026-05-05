@@ -15,7 +15,7 @@ public:
 
     void addEdge(int u, int v) {
         adj[u].push_back(v);
-        adj[v].push_back(u); 
+        adj[v].push_back(u);
     }
 
     void parallelDFSUtil(int node, vector<bool> &visited) {
@@ -27,13 +27,14 @@ public:
             cout << node << " ";
         }
 
-        #pragma omp parallel for
         for (int i = 0; i < adj[node].size(); i++) {
             int neighbor = adj[node][i];
 
-            if (!visited[neighbor]) {
-                #pragma omp task
-                parallelDFSUtil(neighbor, visited);
+            #pragma omp task
+            {
+                if (!visited[neighbor]) {
+                    parallelDFSUtil(neighbor, visited);
+                }
             }
         }
 
